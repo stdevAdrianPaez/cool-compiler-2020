@@ -436,6 +436,10 @@ class BltuInstruction(Instruction):
 class BeqzInstruction(Instruction):
     def __init__(self, *arguments):
         super().__init__('beqz', *arguments)
+        
+class BltzInstruction(Instruction):
+    def __init__(self,  *arguments):
+        super().__init__('bltz', *arguments)
 
 
 class BnezInstruction(Instruction):

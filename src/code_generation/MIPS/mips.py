@@ -208,23 +208,43 @@ def substring_to_mips_visitor(ss: cil.SubStringNode):
     len_offset = CURRENT_FUNCTION.offset[str(ss.len)]
     return [
         mips.Comment(str(ss)),
-        mips.LwInstruction('$t0', f'{str_offset}($fp)'),
-        
-        
         mips.LwInstruction('$a0', f'{len_offset}($fp)'),
         mips.AdduInstruction('$a0', '$a0', 1),
         mips.LiInstruction('$v0', 9),
         mips.SyscallInstruction(),
-        mips.MoveInstruction('$t1', '$v0'),
         
+        mips.LwInstruction('$t0', f'{str_offset}($fp)'),
         
         mips.LwInstruction('$t4', f'{i_offset}($fp)'),
+        mips.BltzInstruction('$t4', 'end_substring_loop'),
+        
+        mips.LiInstruction('$t1', 0),
+        mips.MIPSLabel('length_substring_loop'),
+        mips.LbInstruction('$t2', '($t0)'),
+        mips.BeqzInstruction('$t2', 'end_length_substring_loop'),
+        mips.AdduInstruction('$t0', '$t0', 1),
+        mips.AdduInstruction('$t1', '$t1', 1),
+        mips.BInstruction('length_substring_loop'),
+        mips.MIPSLabel('end_length_substring_loop'),
+        mips.SltInstruction('$t0','$t4', '$t1'),
+        mips.BeqzInstruction('$t0','end_substring_loop'),
+        
+        
+        mips.LwInstruction('$t0', f'{str_offset}($fp)'),
+        
+        mips.MoveInstruction('$t1', '$v0'),
+        
         mips.LwInstruction('$t2', f'{len_offset}($fp)'),
         mips.AdduInstruction('$t0', '$t0', '$t4'),
+        
+        
+        
+        
         mips.MIPSLabel('substring_loop'),
         mips.BeqzInstruction('$t2', 'end_substring_loop'),
         mips.LbInstruction('$t3', '($t0)'),
         mips.SbInstruction('$t3', '($t1)'),
+        mips.BeqzInstruction('$t3', 'end_substring_loop'),
         mips.SubuInstruction('$t2', '$t2', 1),
         mips.AdduInstruction('$t0', '$t0', 1),
         mips.AdduInstruction('$t1', '$t1', 1),
@@ -361,27 +381,24 @@ def allocate_to_mips_visitor(allocate: cil.AllocateNode):
     """
     address = CURRENT_FUNCTION.offset[str(allocate.result)]
     if allocate.type=='String':
-        size= __BUFFSIZE__
-        code=[
+        return[
             mips.Comment(str(allocate)),
-            mips.LiInstruction('$a0', size),
+            mips.LiInstruction('$a0', __BUFFSIZE__),
             mips.LiInstruction('$v0', 9),
             mips.SyscallInstruction(),
             mips.SwInstruction('$v0', f'{address}($fp)')
         ]
         
-    else:
-        size = get_type(allocate.type).size_mips + 16
-        code = [
-            mips.Comment(str(allocate)),
-            mips.LiInstruction('$a0', size),
-            mips.LiInstruction('$v0', 9),
-            mips.SyscallInstruction(),
-            mips.SwInstruction('$v0', f'{address}($fp)'),
-            mips.LaInstruction('$t0', f'vt_{allocate.type}'),
-            mips.SwInstruction('$t0', f'8($v0)')
-        ]
-    return code
+    size = get_type(allocate.type).size_mips
+    return [
+        mips.Comment(str(allocate)),
+        mips.LiInstruction('$a0', size),
+        mips.LiInstruction('$v0', 9),
+        mips.SyscallInstruction(),
+        mips.SwInstruction('$v0', f'{address}($fp)'),
+        mips.LaInstruction('$t0', f'vt_{allocate.type}'),
+        mips.SwInstruction('$t0', f'8($v0)')
+    ]
 
 
 def type_of_to_mips_visitor(typeof: cil.TypeOfNode):
